@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PARKOS — Smart Parking Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&display=swap" rel="stylesheet"/>
+<style>
+/* ─────────────────────────────────────────
+   TOKENS
+───────────────────────────────────────── */
+:root {
+  --void:        #091413;
+  --void2:       #0d1a18;
+  --void3:       #111f1d;
+  --deep:        #285A48;
+  --deep-dim:    #1e4436;
+  --deep-bright: #306b57;
+  --mid:         #408A71;
+  --mid-dim:     #336e5a;
+  --mid-bright:  #4da085;
+  --mint:        #B0E4CC;
+  --mint-dim:    #8ecfb3;
+  --mint-pale:   rgba(176,228,204,0.12);
+  --mint-ghost:  rgba(176,228,204,0.06);
+  --mint-line:   rgba(176,228,204,0.15);
+  --mint-line2:  rgba(176,228,204,0.08);
+
+  --text:        #e8f5ef;
+  --text-mid:    #a8c4b8;
+  --text-dim:    #5a7a6e;
+  --text-ghost:  #334d44;
+
+  --font-ui:     'Syne', sans-serif;
+  --font-mono:   'DM Mono', monospace;
+  --font-serif:  'Fraunces', serif;
+
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+}
+
+/* ─────────────────────────────────────────
+   RESET & BASE
+───────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Subtle noise texture overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Radial ambient glow */
+body::after {
+  content: '';
+  position: fixed;
+  top: -30vh; left: 50%;
+  transform: translateX(-50%);
+  width: 80vw; height: 60vh;
+  background: radial-gradient(ellipse, rgba(64,138,113,0.10) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+
+.app { position: relative; z-index: 1; }
+
+/* ─────────────────────────────────────────
+   SCROLLBAR
+───────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--void2); }
+::-webkit-scrollbar-thumb { background: var(--deep); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--mid); }
+
+/* ─────────────────────────────────────────
+   HEADER
+───────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 48px;
+  height: 68px;
+  background: rgba(9,20,19,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--mint-line);
+  position: sticky; top: 0; z-index: 100;
+}
+
+.logo-wrap { display: flex; align-items: center; gap: 14px; }
+
+.logo-mark {
+  position: relative;
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-mark svg {
+  width: 38px; height: 38px;
+}
+
+.logo-wordmark {
+  display: flex; flex-direction: column; gap: 0;
+}
+.logo-name {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 5px;
+  color: var(--text);
+  text-transform: uppercase;
+  line-height: 1;
+}
+.logo-name span { color: var(--mint); }
+.logo-sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.header-center {
+  display: flex; align-items: center; gap: 6px;
+}
+.nav-pill {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-dim);
+  border: 1px solid transparent;
+}
+.nav-pill:hover { color: var(--text-mid); border-color: var(--mint-line); }
+.nav-pill.active {
+  background: var(--mint-pale);
+  border-color: var(--mint-line2);
+  color: var(--mint);
+}
+
+.header-right { display: flex; align-items: center; gap: 16px; }
+
+.sys-badge {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--mint-ghost);
+  border: 1px solid var(--mint-line);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--mint-dim);
+  letter-spacing: 1px;
+}
+.pulse {
+  width: 6px; height: 6px;
+  background: var(--mint);
+  border-radius: 50%;
+  animation: live-pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(176,228,204,0.4);
+}
+@keyframes live-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(176,228,204,0.4); }
+  70%  { box-shadow: 0 0 0 6px rgba(176,228,204,0); }
+  100% { box-shadow: 0 0 0 0 rgba(176,228,204,0); }
+}
+
+.clock-block { text-align: right; }
+.clock-time {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-mid);
+  letter-spacing: 1px;
+  line-height: 1;
+}
+.clock-date {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* ─────────────────────────────────────────
+   KPI STRIP
+───────────────────────────────────────── */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--mint-line);
+  background: var(--void2);
+}
+
+.kpi-card {
+  padding: 20px 36px;
+  border-right: 1px solid var(--mint-line2);
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  transition: background 0.3s;
+}
+.kpi-card:last-child { border-right: none; }
+.kpi-card:hover { background: var(--mint-ghost); }
+
+/* accent bar on hover */
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--mint);
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+  transform-origin: bottom;
+}
+.kpi-card:hover::before { transform: scaleY(1); }
+
+.kpi-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.kpi-label-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--mid);
+  flex-shrink: 0;
+}
+
+.kpi-value {
+  font-family: var(--font-ui);
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+  margin-bottom: 5px;
+  letter-spacing: -1px;
+}
+.kpi-value.c-mint   { color: var(--mint); }
+.kpi-value.c-mid    { color: var(--mid-bright); }
+.kpi-value.c-dim    { color: var(--text-mid); }
+
+.kpi-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-ghost);
+  letter-spacing: 0.5px;
+}
+
+/* Occupancy bar */
+.occ-bar-wrap { margin-top: 6px; }
+.occ-bar-track {
+  height: 3px;
+  background: var(--void3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.occ-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--deep), var(--mid), var(--mint));
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  width: 0%;
+}
+
+/* ─────────────────────────────────────────
+   MAIN LAYOUT
+───────────────────────────────────────── */
+.main {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  min-height: calc(100vh - 138px);
+}
+
+/* ─────────────────────────────────────────
+   LEFT PANEL
+───────────────────────────────────────── */
+.left-panel {
+  background: var(--void2);
+  border-right: 1px solid var(--mint-line);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-block {
+  padding: 28px 28px;
+  border-bottom: 1px solid var(--mint-line2);
+}
+.panel-block:last-child { border-bottom: none; }
+
+/* Section header */
+.blk-hd {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 22px;
+}
+.blk-icon {
+  width: 32px; height: 32px;
+  background: var(--mint-ghost);
+  border: 1px solid var(--mint-line);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  color: var(--mint);
+}
+.blk-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-mid);
+}
+
+/* Form */
+.fgrp { margin-bottom: 14px; }
+.fgrp label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.finput {
+  width: 100%;
+  background: var(--void3);
+  border: 1px solid rgba(176,228,204,0.1);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  outline: none;
+  transition: all 0.2s;
+  -webkit-appearance: none;
+  letter-spacing: 0.5px;
+}
+.finput::placeholder {
+  color: var(--text-ghost);
+  font-style: italic;
+}
+.finput:focus {
+  border-color: var(--mid);
+  background: rgba(64,138,113,0.06);
+  box-shadow: 0 0 0 3px rgba(64,138,113,0.1);
+}
+.finput[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.5) sepia(1) saturate(2) hue-rotate(100deg);
+  cursor: pointer; opacity: 0.6;
+}
+
+/* Buttons */
+.btn {
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--r-sm);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: all 0.2s;
+  position: relative; overflow: hidden;
+}
+.btn::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 100%);
+}
+.btn-park {
+  background: linear-gradient(135deg, var(--deep), var(--mid));
+  color: var(--mint);
+  box-shadow: 0 4px 16px rgba(40,90,72,0.3), inset 0 1px 0 rgba(176,228,204,0.1);
+}
+.btn-park:hover {
+  background: linear-gradient(135deg, var(--deep-bright), var(--mid-bright));
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(40,90,72,0.4);
+}
+.btn-exit-v {
+  background: transparent;
+  color: var(--mint-dim);
+  border: 1px solid var(--mint-line);
+  box-shadow: none;
+}
+.btn-exit-v::after { display: none; }
+.btn-exit-v:hover {
+  background: var(--mint-ghost);
+  border-color: var(--mid);
+  color: var(--mint);
+  transform: translateY(-1px);
+}
+.btn:active { transform: translateY(0) !important; }
+
+.btn-icon-wrap {
+  width: 18px; height: 18px;
+  background: rgba(176,228,204,0.15);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; flex-shrink: 0;
+}
+
+/* Alerts */
+.alert {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  display: none;
+  animation: slideup 0.25s ease;
+}
+@keyframes slideup {
+  from { opacity:0; transform:translateY(6px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.alert.ok  {
+  background: rgba(64,138,113,0.12);
+  border: 1px solid rgba(64,138,113,0.3);
+  border-left: 3px solid var(--mid);
+  color: var(--mint-dim);
+  display: block;
+}
+.alert.err {
+  background: rgba(255,80,60,0.07);
+  border: 1px solid rgba(255,80,60,0.2);
+  border-left: 3px solid #e05c45;
+  color: #f08070;
+  display: block;
+}
+
+/* Ticket */
+.ticket {
+  display: none;
+  margin-top: 14px;
+  border: 1px solid var(--mint-line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--void3);
+  animation: slideup 0.3s ease;
+  position: relative;
+}
+.ticket.show { display: block; }
+.ticket-glow {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--mid), var(--mint), var(--mid), transparent);
+}
+.ticket-top {
+  padding: 14px 16px 12px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  border-bottom: 1px dashed rgba(176,228,204,0.1);
+}
+.ticket-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+.ticket-id {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mint-dim);
+  letter-spacing: 1px;
+}
+.ticket-slot-badge {
+  text-align: right;
+}
+.tsb-label { font-family: var(--font-mono); font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); }
+.tsb-val {
+  font-family: var(--font-ui);
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--mint);
+  letter-spacing: 1px;
+  line-height: 1;
+}
+.ticket-grid {
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.tg-field label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+.tg-field .val {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-mid);
+}
+.tg-field.full { grid-column: 1/-1; }
+.tg-field.fee .val {
+  font-family: var(--font-ui);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--mint);
+  letter-spacing: -0.5px;
+}
+
+/* Rate schedule */
+.rate-list { display: flex; flex-direction: column; gap: 2px; }
+.rate-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 14px;
+  background: var(--void3);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--mint-line2);
+  transition: border-color 0.2s;
+}
+.rate-item:hover { border-color: var(--mint-line); }
+.rate-k {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.rate-v {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mint-dim);
+  letter-spacing: 0.5px;
+}
+.rate-v.free { color: var(--mid-bright); }
+
+/* ─────────────────────────────────────────
+   RIGHT PANEL
+───────────────────────────────────────── */
+.right-panel { display: flex; flex-direction: column; background: var(--void); }
+
+/* Map section */
+.map-section {
+  padding: 28px 36px;
+  border-bottom: 1px solid var(--mint-line2);
+  background: var(--void2);
+  animation: fadein 0.5s ease both;
+}
+@keyframes fadein {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.map-topbar {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.map-title-grp {}
+.map-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.map-title {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.map-title span { color: var(--mint); }
+
+.legend-row { display: flex; gap: 14px; align-items: center; }
+.leg {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.leg-sq {
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.leg-sq.av {
+  background: linear-gradient(135deg, var(--deep-dim), var(--deep));
+  border: 1px solid var(--mid);
+}
+.leg-sq.oc {
+  background: linear-gradient(135deg, #2a1a0e, #5c3a1e);
+  border: 1px solid #8b5e32;
+}
+
+/* Grid canvas */
+.grid-canvas {
+  background: var(--void3);
+  border: 1px solid var(--mint-line2);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.grid-canvas::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(176,228,204,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(176,228,204,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* Entrance indicator */
+.entrance-strip {
+  margin-top: 14px;
+  height: 28px;
+  background: linear-gradient(90deg, var(--deep-dim), var(--deep), var(--deep-dim));
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  border: 1px solid var(--mid-dim);
+}
+.entrance-strip span {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--mint-dim);
+  font-weight: 500;
+}
+.ent-chevrons { color: var(--mid); font-size: 10px; letter-spacing: -2px; }
+
+/* Row separator */
+.lane-sep {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(64,138,113,0.25), transparent);
+  margin: 8px 0;
+}
+
+.slot-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+/* Slot */
+.slot {
+  aspect-ratio: 1.45;
+  border-radius: var(--r-sm);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  position: relative; overflow: hidden;
+  border: 1px solid;
+}
+.slot::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* Slot number tab */
+.slot::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: 3px; right: 4px;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  opacity: 0.4;
+  letter-spacing: 0.3px;
+  color: inherit;
+}
+
+.slot.available {
+  background: linear-gradient(135deg, rgba(40,90,72,0.3), rgba(40,90,72,0.12));
+  border-color: rgba(64,138,113,0.35);
+  color: var(--mid-bright);
+}
+.slot.available:hover {
+  background: linear-gradient(135deg, rgba(64,138,113,0.25), rgba(64,138,113,0.10));
+  border-color: var(--mid);
+  transform: scale(1.05) translateY(-1px);
+  box-shadow: 0 6px 20px rgba(64,138,113,0.2), 0 0 0 1px var(--mid);
+}
+
+.slot.occupied {
+  background: linear-gradient(135deg, rgba(90,55,20,0.35), rgba(70,40,12,0.2));
+  border-color: rgba(139,94,50,0.4);
+  color: #c4895e;
+}
+.slot.occupied:hover {
+  border-color: #8b5e32;
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(139,94,50,0.2);
+}
+
+.slot.highlighted {
+  animation: slot-glow 1.2s ease-in-out infinite;
+}
+@keyframes slot-glow {
+  0%,100% {
+    border-color: var(--mid);
+    box-shadow: 0 0 0 0 rgba(176,228,204,0);
+    background: linear-gradient(135deg, rgba(64,138,113,0.25),rgba(64,138,113,0.10));
+  }
+  50% {
+    border-color: var(--mint);
+    box-shadow: 0 0 20px 4px rgba(176,228,204,0.2), 0 0 0 2px rgba(176,228,204,0.1);
+    background: linear-gradient(135deg, rgba(176,228,204,0.15),rgba(64,138,113,0.10));
+  }
+}
+
+.s-icon { font-size: 16px; position: relative; z-index: 1; }
+.s-label {
+  font-family: var(--font-ui);
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.5px;
+  position: relative; z-index: 1;
+  line-height: 1;
+}
+.s-veh {
+  font-family: var(--font-mono);
+  font-size: 6.5px;
+  position: relative; z-index: 1;
+  opacity: 0.7; max-width: 90%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+/* ─────────────────────────────────────────
+   TRANSACTIONS
+───────────────────────────────────────── */
+.tx-section {
+  flex: 1; padding: 26px 36px;
+  animation: fadein 0.5s ease both 0.1s;
+}
+
+.tx-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px;
+}
+.tx-title-grp {}
+.tx-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--text-dim);
+  margin-bottom: 3px;
+}
+.tx-title {
+  font-family: var(--font-ui);
+  font-size: 18px; font-weight: 800;
+  color: var(--text); letter-spacing: -0.3px;
+}
+
+.tab-set {
+  display: flex;
+  background: var(--void2);
+  border: 1px solid var(--mint-line2);
+  border-radius: 6px;
+  padding: 3px;
+  gap: 2px;
+}
+.tab {
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-dim); cursor: pointer;
+  transition: all 0.2s;
+}
+.tab:hover { color: var(--text-mid); }
+.tab.active {
+  background: linear-gradient(135deg, var(--deep), var(--mid-dim));
+  color: var(--mint);
+  box-shadow: 0 2px 8px rgba(40,90,72,0.3);
+}
+
+/* Table */
+.tbl-outer {
+  overflow-x: auto;
+  border: 1px solid var(--mint-line2);
+  border-radius: var(--r-md);
+  background: var(--void2);
+}
+table { width: 100%; border-collapse: collapse; }
+
+thead tr {
+  background: linear-gradient(90deg, var(--void3), rgba(40,90,72,0.15), var(--void3));
+  border-bottom: 1px solid var(--mint-line);
+}
+th {
+  padding: 11px 16px;
+  font-family: var(--font-mono);
+  font-size: 9px; text-transform: uppercase;
+  letter-spacing: 2px; color: var(--text-dim);
+  font-weight: 400; text-align: left; white-space: nowrap;
+}
+
+td {
+  padding: 12px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--mint-line2);
+  vertical-align: middle;
+  color: var(--text-mid);
+  transition: background 0.15s;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--mint-ghost); }
+
+.tid-cell {
+  font-family: var(--font-mono);
+  font-size: 11px; color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+.veh-cell {
+  font-family: var(--font-mono);
+  font-size: 12px; font-weight: 500;
+  color: var(--text);
+  background: rgba(64,138,113,0.08);
+  border: 1px solid rgba(64,138,113,0.18);
+  padding: 2px 8px; border-radius: 3px;
+  letter-spacing: 0.5px; display: inline-block;
+}
+.slot-cell {
+  font-family: var(--font-ui);
+  font-size: 15px; font-weight: 800;
+  color: var(--mid-bright); letter-spacing: 0.5px;
+}
+.time-cell {
+  font-family: var(--font-mono);
+  font-size: 11px; color: var(--text-dim);
+  font-style: italic;
+}
+.dur-cell {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 500;
+  color: var(--text-mid);
+}
+.fee-cell {
+  font-family: var(--font-ui);
+  font-size: 15px; font-weight: 800;
+  color: var(--mint-dim);
+  letter-spacing: -0.3px;
+}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 500;
+  letter-spacing: 1.5px; text-transform: uppercase;
+}
+.badge.active {
+  background: rgba(64,138,113,0.12);
+  border: 1px solid rgba(64,138,113,0.3);
+  color: var(--mid-bright);
+}
+.badge.active::before {
+  content: '';
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--mid-bright);
+  animation: live-pulse 2s infinite;
+  flex-shrink: 0;
+}
+.badge.done {
+  background: rgba(176,228,204,0.05);
+  border: 1px solid var(--mint-line2);
+  color: var(--text-dim);
+}
+.badge.done::before {
+  content: '✓'; font-size: 8px; color: var(--text-dim);
+}
+
+.empty-state {
+  padding: 56px; text-align: center;
+}
+.empty-icon {
+  width: 56px; height: 56px;
+  background: var(--mint-ghost);
+  border: 1px solid var(--mint-line2);
+  border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; margin: 0 auto 16px;
+}
+.empty-title {
+  font-size: 14px; font-weight: 700;
+  color: var(--text-mid);
+  margin-bottom: 6px;
+}
+.empty-sub {
+  font-family: var(--font-mono);
+  font-size: 11px; font-style: italic;
+  color: var(--text-dim);
+}
+
+/* ─────────────────────────────────────────
+   TOAST
+───────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 28px; right: 28px;
+  background: var(--void2);
+  border: 1px solid var(--mint-line);
+  border-radius: var(--r-lg);
+  padding: 14px 18px;
+  min-width: 280px; max-width: 340px;
+  z-index: 999;
+  display: flex; align-items: flex-start; gap: 12px;
+  transform: translateY(80px) scale(0.95);
+  opacity: 0;
+  transition: all 0.35s cubic-bezier(0.16,1,0.3,1);
+  box-shadow: 0 16px 48px rgba(9,20,19,0.6), 0 0 0 1px rgba(176,228,204,0.05);
+}
+#toast.show { transform: translateY(0) scale(1); opacity: 1; }
+#toast.err  { border-color: rgba(255,80,60,0.3); }
+
+.t-icon {
+  width: 32px; height: 32px; flex-shrink: 0;
+  background: var(--mint-ghost);
+  border: 1px solid var(--mint-line);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; margin-top: 1px;
+}
+#toast.err .t-icon {
+  background: rgba(255,80,60,0.08);
+  border-color: rgba(255,80,60,0.2);
+}
+.t-title {
+  font-size: 13px; font-weight: 700;
+  color: var(--text); letter-spacing: 0.2px;
+  margin-bottom: 2px;
+}
+.t-body {
+  font-family: var(--font-mono);
+  font-size: 11px; color: var(--text-dim);
+  line-height: 1.4; font-style: italic;
+}
+
+/* ─────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .main { grid-template-columns: 1fr; }
+  .left-panel { border-right: none; border-bottom: 1px solid var(--mint-line2); }
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  header { padding: 0 18px; }
+  .header-center { display: none; }
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .kpi-card { padding: 14px 20px; }
+  .kpi-value { font-size: 28px; }
+  .panel-block, .map-section, .tx-section { padding: 18px; }
+  .slot-row { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ─────────────────────────────────────────
+   PAGE LOAD ANIMATIONS
+───────────────────────────────────────── */
+.kpi-card { animation: fadein 0.4s ease both; }
+.kpi-card:nth-child(1) { animation-delay: 0.05s; }
+.kpi-card:nth-child(2) { animation-delay: 0.10s; }
+.kpi-card:nth-child(3) { animation-delay: 0.15s; }
+.kpi-card:nth-child(4) { animation-delay: 0.20s; }
+.panel-block { animation: fadein 0.4s ease both; }
+.panel-block:nth-child(1) { animation-delay: 0.12s; }
+.panel-block:nth-child(2) { animation-delay: 0.18s; }
+.panel-block:nth-child(3) { animation-delay: 0.24s; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══ HEADER ══════════════════════════════ -->
+<header>
+  <div class="logo-wrap">
+    <div class="logo-mark">
+      <svg viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="19,2 36,10.5 36,27.5 19,36 2,27.5 2,10.5" fill="rgba(40,90,72,0.3)" stroke="#408A71" stroke-width="1"/>
+        <polygon points="19,7 31,13.5 31,26.5 19,33 7,26.5 7,13.5" fill="rgba(64,138,113,0.15)" stroke="#B0E4CC" stroke-width="0.5" opacity="0.5"/>
+        <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Syne,sans-serif" font-weight="800" font-size="14" fill="#B0E4CC" letter-spacing="1">P</text>
+      </svg>
+    </div>
+    <div class="logo-wordmark">
+      <div class="logo-name">Park<span>os</span></div>
+      <div class="logo-sub">Smart Facility System</div>
+    </div>
+  </div>
+
+  <div class="header-center">
+    <div class="nav-pill active">Dashboard</div>
+    <div class="nav-pill">Analytics</div>
+    <div class="nav-pill">Settings</div>
+  </div>
+
+  <div class="header-right">
+    <div class="sys-badge"><div class="pulse"></div> System Online</div>
+    <div class="clock-block">
+      <div class="clock-time" id="clk">--:--:--</div>
+      <div class="clock-date" id="clk-date">—</div>
+    </div>
+  </div>
+</header>
+
+<!-- ══ KPI STRIP ════════════════════════════ -->
+<div class="kpi-strip">
+  <div class="kpi-card">
+    <div class="kpi-label"><span class="kpi-label-dot"></span> Total Capacity</div>
+    <div class="kpi-value c-dim" id="kv-total">20</div>
+    <div class="kpi-meta">parking slots</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label"><span class="kpi-label-dot" style="background:var(--mint)"></span> Available</div>
+    <div class="kpi-value c-mint" id="kv-avail">20</div>
+    <div class="kpi-meta" id="km-avail">100% occupancy free</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label"><span class="kpi-label-dot" style="background:#8b5e32"></span> Occupied</div>
+    <div class="kpi-value c-mid" id="kv-occ">0</div>
+    <div class="kpi-meta">
+      <div class="occ-bar-wrap">
+        <div class="occ-bar-track"><div class="occ-bar-fill" id="occ-bar"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label"><span class="kpi-label-dot" style="background:var(--mint)"></span> Revenue</div>
+    <div class="kpi-value c-mint" id="kv-rev">₹0</div>
+    <div class="kpi-meta" id="km-rev">0 vehicles served</div>
+  </div>
+</div>
+
+<!-- ══ MAIN ═════════════════════════════════ -->
+<div class="main">
+
+  <!-- Left Panel -->
+  <div class="left-panel">
+
+    <!-- Entry -->
+    <div class="panel-block">
+      <div class="blk-hd">
+        <div class="blk-icon">↓</div>
+        <div class="blk-title">Vehicle Entry</div>
+      </div>
+      <div class="fgrp">
+        <label>Registration Number</label>
+        <input class="finput" type="text" id="ev" placeholder="e.g. TN38AB1234" maxlength="12" autocomplete="off"/>
+      </div>
+      <div class="fgrp">
+        <label>Entry Time <span style="opacity:.5;font-style:italic;font-size:8px;">(optional · defaults to now)</span></label>
+        <input class="finput" type="datetime-local" id="et"/>
+      </div>
+      <button class="btn btn-park" onclick="parkVehicle()">
+        <span class="btn-icon-wrap">↓</span>
+        Allocate Parking Slot
+      </button>
+      <div class="alert" id="entry-alert"></div>
+      <div class="ticket" id="entry-ticket">
+        <div class="ticket-glow"></div>
+        <div class="ticket-top">
+          <div>
+            <div class="ticket-label">Entry Permit</div>
+            <div class="ticket-id" id="tk-id">#——</div>
+          </div>
+          <div class="ticket-slot-badge">
+            <div class="tsb-label">Slot</div>
+            <div class="tsb-val" id="tk-slot">P00</div>
+          </div>
+        </div>
+        <div class="ticket-grid">
+          <div class="tg-field"><label>Vehicle</label><div class="val" id="tk-veh">—</div></div>
+          <div class="tg-field"><label>Entry</label><div class="val" id="tk-entry">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exit -->
+    <div class="panel-block">
+      <div class="blk-hd">
+        <div class="blk-icon" style="color:var(--mid-bright);">↑</div>
+        <div class="blk-title">Vehicle Exit</div>
+      </div>
+      <div class="fgrp">
+        <label>Registration Number</label>
+        <input class="finput" type="text" id="xv" placeholder="e.g. TN38AB1234" maxlength="12" autocomplete="off"/>
+      </div>
+      <div class="fgrp">
+        <label>Exit Time <span style="opacity:.5;font-style:italic;font-size:8px;">(optional · defaults to now)</span></label>
+        <input class="finput" type="datetime-local" id="xt"/>
+      </div>
+      <button class="btn btn-exit-v" onclick="exitVehicle()">
+        <span class="btn-icon-wrap" style="background:rgba(176,228,204,0.1);">↑</span>
+        Process Exit & Calculate Fee
+      </button>
+      <div class="alert" id="exit-alert"></div>
+      <div class="ticket" id="exit-ticket">
+        <div class="ticket-glow"></div>
+        <div class="ticket-top">
+          <div>
+            <div class="ticket-label">Exit Receipt</div>
+            <div class="ticket-id" id="xk-id">#——</div>
+          </div>
+          <div class="ticket-slot-badge">
+            <div class="tsb-label">Slot</div>
+            <div class="tsb-val" id="xk-slot">P00</div>
+          </div>
+        </div>
+        <div class="ticket-grid">
+          <div class="tg-field"><label>Vehicle</label><div class="val" id="xk-veh">—</div></div>
+          <div class="tg-field"><label>Duration</label><div class="val" id="xk-dur">—</div></div>
+          <div class="tg-field fee full"><label>Amount Due</label><div class="val" id="xk-fee">₹0.00</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rates -->
+    <div class="panel-block">
+      <div class="blk-hd">
+        <div class="blk-icon" style="font-size:12px;">₹</div>
+        <div class="blk-title">Tariff Schedule</div>
+      </div>
+      <div class="rate-list">
+        <div class="rate-item">
+          <span class="rate-k">Grace period ≤ 15 min</span>
+          <span class="rate-v free">Free</span>
+        </div>
+        <div class="rate-item">
+          <span class="rate-k">First hour</span>
+          <span class="rate-v">₹50.00</span>
+        </div>
+        <div class="rate-item">
+          <span class="rate-k">Each additional hour</span>
+          <span class="rate-v">₹40.00 / hr</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel">
+
+    <!-- Map -->
+    <div class="map-section">
+      <div class="map-topbar">
+        <div class="map-title-grp">
+          <div class="map-eyebrow">Live View</div>
+          <div class="map-title">Slot <span>Allocation Map</span></div>
+        </div>
+        <div class="legend-row">
+          <div class="leg"><span class="leg-sq av"></span> Available</div>
+          <div class="leg"><span class="leg-sq oc"></span> Occupied</div>
+        </div>
+      </div>
+      <div class="grid-canvas">
+        <div id="slot-grid"></div>
+        <div class="entrance-strip">
+          <span class="ent-chevrons">>>></span>
+          <span>Main Entrance / Exit</span>
+          <span class="ent-chevrons">&lt;&lt;&lt;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="tx-section">
+      <div class="tx-bar">
+        <div class="tx-title-grp">
+          <div class="tx-eyebrow">Activity Log</div>
+          <div class="tx-title">Transaction History</div>
+        </div>
+        <div class="tab-set">
+          <div class="tab active" onclick="switchTab('all',this)">All</div>
+          <div class="tab" onclick="switchTab('active',this)">Active</div>
+          <div class="tab" onclick="switchTab('completed',this)">Completed</div>
+        </div>
+      </div>
+      <div class="tbl-outer">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticket</th><th>Vehicle</th><th>Slot</th>
+              <th>Entry</th><th>Exit</th><th>Duration</th>
+              <th>Fee</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tx-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast">
+  <div class="t-icon" id="t-ico"></div>
+  <div>
+    <div class="t-title" id="t-title"></div>
+    <div class="t-body" id="t-body"></div>
+  </div>
+</div>
+
+<!-- ══ SCRIPT ═══════════════════════════════ -->
+<script>
+/* ── Config ── */
+const TOTAL = 20, FIRST_H = 50, PER_H = 40, GRACE = 15;
+const slots = {}, tickets = {};
+let curTab = 'all', hlSlot = null;
+
+for (let i = 1; i <= TOTAL; i++) {
+  slots[i] = {
+    id: i,
+    label: `P${String(i).padStart(2,'0')}`,
+    status: 'available',
+    vehicle: null, entry: null, tid: null
+  };
+}
+
+/* ── Helpers ── */
+const $ = id => document.getElementById(id);
+function nearestFree() { for (let i=1;i<=TOTAL;i++) if(slots[i].status==='available') return i; return null; }
+function calcFee(m) { if(m<=GRACE)return 0; const h=m/60; if(h<=1)return FIRST_H; return FIRST_H+(h-1)*PER_H; }
+function fmtDur(m) { const h=Math.floor(m/60),mn=Math.floor(m%60); return h>0?`${h}h ${mn}m`:`${mn}m`; }
+function fmtT(s) { if(!s)return'—'; return new Date(s).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true}); }
+function genId() { return Math.random().toString(36).substring(2,8).toUpperCase(); }
+
+/* ── Actions ── */
+function parkVehicle() {
+  const vi=$('ev'), ti=$('et');
+  const veh = vi.value.trim().toUpperCase();
+  if (!veh) { toast('err','Missing Input','Please enter a vehicle registration number.'); return; }
+  const dup = Object.values(tickets).find(t=>t.vehicle===veh&&t.status==='active');
+  if (dup) { showAlert('entry-alert','err',`${veh} is already parked at slot ${dup.slotLabel}.`); return; }
+  const sid = nearestFree();
+  if (!sid) { showAlert('entry-alert','err','Facility at full capacity. No slots available.'); return; }
+  const et = ti.value ? new Date(ti.value).toISOString() : new Date().toISOString();
+  const tid = genId();
+  tickets[tid] = { tid, vehicle:veh, slotId:sid, slotLabel:slots[sid].label, entry:et, exit:null, dur:null, fee:null, status:'active' };
+  slots[sid].status='occupied'; slots[sid].vehicle=veh; slots[sid].entry=et; slots[sid].tid=tid;
+  showEntryTicket(tickets[tid]);
+  hideAlert('entry-alert'); vi.value=''; ti.value='';
+  hlSlot=sid; toast('ok','Slot Allocated',`${veh} → ${slots[sid].label}`); render();
+  setTimeout(()=>{ hlSlot=null; renderGrid(); }, 3000);
+}
+
+function exitVehicle() {
+  const vi=$('xv'), ti=$('xt');
+  const veh = vi.value.trim().toUpperCase();
+  if (!veh) { toast('err','Missing Input','Please enter a vehicle registration number.'); return; }
+  const t = Object.values(tickets).find(t=>t.vehicle===veh&&t.status==='active');
+  if (!t) { showAlert('exit-alert','err',`No active record found for ${veh}.`); return; }
+  const exitDt = ti.value ? new Date(ti.value) : new Date();
+  const entDt  = new Date(t.entry);
+  if (exitDt < entDt) { showAlert('exit-alert','err','Exit time cannot precede entry time.'); return; }
+  const dur = (exitDt - entDt) / 60000;
+  const fee = calcFee(dur);
+  t.exit=exitDt.toISOString(); t.dur=dur; t.fee=fee; t.status='completed';
+  const s=slots[t.slotId]; s.status='available'; s.vehicle=null; s.entry=null; s.tid=null;
+  showExitTicket(t); hideAlert('exit-alert'); vi.value=''; ti.value='';
+  toast('ok','Exit Processed',`${veh} — ₹${fee.toFixed(2)} collected`); render();
+}
+
+/* ── Render ── */
+function render() { renderKPIs(); renderGrid(); renderTable(); }
+
+function renderKPIs() {
+  const occ = Object.values(slots).filter(s=>s.status==='occupied').length;
+  const avail = TOTAL - occ;
+  const done = Object.values(tickets).filter(t=>t.status==='completed');
+  const rev = done.reduce((a,t)=>a+(t.fee||0), 0);
+  $('kv-total').textContent = TOTAL;
+  $('kv-avail').textContent = avail;
+  $('km-avail').textContent = `${Math.round(avail/TOTAL*100)}% occupancy free`;
+  $('kv-occ').textContent   = occ;
+  $('occ-bar').style.width  = `${Math.round(occ/TOTAL*100)}%`;
+  $('kv-rev').textContent   = `₹${rev.toFixed(0)}`;
+  $('km-rev').textContent   = `${done.length} vehicle${done.length!==1?'s':''} served`;
+}
+
+function renderGrid() {
+  const wrap = $('slot-grid'); wrap.innerHTML = '';
+  const perRow = 5, rows = Math.ceil(TOTAL / perRow);
+  for (let r = 0; r < rows; r++) {
+    if (r > 0) { const sep = document.createElement('div'); sep.className = 'lane-sep'; wrap.appendChild(sep); }
+    const row = document.createElement('div'); row.className = 'slot-row';
+    for (let c = 0; c < perRow; c++) {
+      const i = r * perRow + c + 1; if (i > TOTAL) break;
+      const s = slots[i];
+      const d = document.createElement('div');
+      d.className = `slot ${s.status}${hlSlot===i?' highlighted':''}`;
+      d.setAttribute('data-label', s.label);
+      d.innerHTML = `<div class="s-icon">${s.status==='occupied'?'🚗':'🅿'}</div><div class="s-label">${s.label}</div>${s.vehicle?`<div class="s-veh">${s.vehicle}</div>`:''}`;
+      d.title = s.status==='occupied' ? `${s.label} · ${s.vehicle} · Since ${fmtT(s.entry)}` : `${s.label} · Available`;
+      row.appendChild(d);
+    }
+    wrap.appendChild(row);
+  }
+}
+
+function renderTable() {
+  const tbody = $('tx-body');
+  let list = Object.values(tickets).sort((a,b)=>new Date(b.entry)-new Date(a.entry));
+  if (curTab==='active')    list = list.filter(t=>t.status==='active');
+  if (curTab==='completed') list = list.filter(t=>t.status==='completed');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+      <div class="empty-icon">🅿</div>
+      <div class="empty-title">No transactions yet</div>
+      <div class="empty-sub">Awaiting first vehicle entry</div>
+    </div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(t=>`<tr>
+    <td><span class="tid-cell">#${t.tid}</span></td>
+    <td><span class="veh-cell">${t.vehicle}</span></td>
+    <td><span class="slot-cell">${t.slotLabel}</span></td>
+    <td><span class="time-cell">${fmtT(t.entry)}</span></td>
+    <td><span class="time-cell">${t.exit?fmtT(t.exit):'—'}</span></td>
+    <td><span class="dur-cell">${t.dur!==null?fmtDur(t.dur):'—'}</span></td>
+    <td>${t.fee!==null?`<span class="fee-cell">₹${t.fee.toFixed(2)}</span>`:'—'}</td>
+    <td><span class="badge ${t.status==='active'?'active':'done'}">${t.status==='active'?'Parked':'Complete'}</span></td>
+  </tr>`).join('');
+}
+
+/* ── Tickets ── */
+function showEntryTicket(t) {
+  $('tk-id').textContent    = `#${t.tid}`;
+  $('tk-slot').textContent  = t.slotLabel;
+  $('tk-veh').textContent   = t.vehicle;
+  $('tk-entry').textContent = fmtT(t.entry);
+  $('entry-ticket').classList.add('show');
+}
+function showExitTicket(t) {
+  $('xk-id').textContent    = `#${t.tid}`;
+  $('xk-slot').textContent  = t.slotLabel;
+  $('xk-veh').textContent   = t.vehicle;
+  $('xk-dur').textContent   = fmtDur(t.dur);
+  $('xk-fee').textContent   = `₹${t.fee.toFixed(2)}`;
+  $('exit-ticket').classList.add('show');
+}
+
+/* ── Alerts & Toast ── */
+function showAlert(id,type,msg) { const el=$(id); el.className=`alert ${type}`; el.textContent=msg; }
+function hideAlert(id)          { $(id).className='alert'; }
+
+let toastTimer;
+function toast(type, title, msg) {
+  const el = $('toast');
+  $('t-ico').textContent   = type==='ok' ? '✓' : '✕';
+  $('t-title').textContent = title;
+  $('t-body').textContent  = msg;
+  el.className = `show ${type==='ok'?'':'err'}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.className='', 3800);
+}
+
+function switchTab(tab, el) {
+  curTab = tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+/* ── Clock ── */
+function updateClock() {
+  const n = new Date();
+  $('clk').textContent      = n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  $('clk-date').textContent = n.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'}).toUpperCase();
+}
+setInterval(updateClock, 1000); updateClock();
+
+/* ── Input polish ── */
+['ev','xv'].forEach(id => {
+  const el = $(id);
+  el.addEventListener('input', function() { const p=this.selectionStart; this.value=this.value.toUpperCase(); this.setSelectionRange(p,p); });
+  el.addEventListener('keydown', e => { if(e.key==='Enter')(id==='ev'?parkVehicle:exitVehicle)(); });
+});
+
+/* ── Init ── */
+render();
+</script>
+</body>
+</html>
